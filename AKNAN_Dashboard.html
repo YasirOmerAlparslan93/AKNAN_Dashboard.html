@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AKNAN MERMER — Invoice Intelligence Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>
+<style>
+:root{
+  --slate:#1C2938;--slate2:#243447;--slate3:#2E4057;
+  --gold:#C4913A;--gold-light:#E8B96A;--gold-dim:#8A6320;
+  --teal:#1A7A8A;--teal-light:#25A8BC;
+  --marble:#F9F8F6;--white:#FFFFFF;
+  --card:#FFFFFF;--border:#E5E2DB;
+  --text:#1C2938;--muted:#6B7280;--light:#F1EFE9;
+  --green:#16A34A;--red:#DC2626;--amber:#D97706;--blue:#2563EB;
+  --sidebar-w:248px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--marble);color:var(--text);display:flex;min-height:100vh;font-size:14px;}
+#sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--slate);display:flex;flex-direction:column;position:fixed;left:0;top:0;z-index:100;overflow-y:auto;overflow-x:hidden;}
+.sidebar-logo{padding:22px 20px 18px;border-bottom:1px solid rgba(196,145,58,.2);position:relative;}
+.logo-vein{position:absolute;inset:0;background:linear-gradient(135deg,transparent 40%,rgba(196,145,58,.08) 60%,transparent 75%);pointer-events:none;}
+.logo-title{font-family:'Cinzel',serif;font-size:12.5px;font-weight:700;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;line-height:1.4;}
+.logo-sub{font-size:9.5px;color:rgba(255,255,255,.35);letter-spacing:.07em;margin-top:3px;}
+.logo-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--gold);margin-right:5px;vertical-align:middle;}
+.nav-section{padding:10px 0 0;}
+.nav-label{font-size:9px;letter-spacing:.15em;color:rgba(255,255,255,.28);text-transform:uppercase;padding:0 18px 5px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 18px;cursor:pointer;color:rgba(255,255,255,.58);font-size:12.5px;transition:all .15s;border-left:2px solid transparent;}
+.nav-item:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.05);}
+.nav-item.active{color:var(--gold);background:rgba(196,145,58,.1);border-left-color:var(--gold);}
+.ni-count{margin-left:auto;font-size:9.5px;background:rgba(255,255,255,.1);padding:2px 6px;border-radius:10px;color:rgba(255,255,255,.4);}
+.ni-icon{font-size:13px;width:15px;text-align:center;}
+.sidebar-footer{margin-top:auto;padding:14px 18px;border-top:1px solid rgba(255,255,255,.07);font-size:9.5px;color:rgba(255,255,255,.22);}
+#main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column;}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:13px 30px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:50;}
+.topbar-title{font-family:'Cinzel',serif;font-size:15px;font-weight:600;color:var(--text);}
+#upload-btn{margin-left:auto;background:var(--gold);color:white;border:none;padding:8px 16px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s;}
+#upload-btn:hover{background:var(--gold-dim);}
+#file-input{display:none;}
+#file-name{font-size:11px;color:var(--muted);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.content{padding:26px 30px;flex:1;}
+#upload-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 62px);text-align:center;}
+.upload-hero{width:110px;height:110px;background:var(--light);border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:22px;border:2px dashed var(--border);}
+.upload-title{font-family:'Cinzel',serif;font-size:22px;color:var(--slate);margin-bottom:8px;}
+.upload-sub{color:var(--muted);font-size:13.5px;max-width:360px;line-height:1.65;margin-bottom:26px;}
+.upload-cta{background:var(--slate);color:white;padding:11px 30px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;display:inline-flex;align-items:center;gap:7px;}
+.upload-cta:hover{background:var(--slate2);}
+.upload-formats{font-size:11px;color:var(--muted);margin-top:10px;}
+#dashboard{display:none;}
+.page{display:none;}
+.page.active{display:block;}
+.page-header{margin-bottom:22px;}
+.page-title{font-family:'Cinzel',serif;font-size:20px;font-weight:600;color:var(--slate);}
+.page-subtitle{font-size:11.5px;color:var(--muted);margin-top:4px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:24px;}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:16px 18px;position:relative;overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;top:0;right:0;bottom:0;width:3px;background:var(--accent,var(--gold));border-radius:0 9px 9px 0;}
+.kpi-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;}
+.kpi-value{font-size:20px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;line-height:1;}
+.kpi-sub{font-size:10.5px;color:var(--muted);margin-top:4px;}
+.chart-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-bottom:22px;}
+.chart-grid.wide{grid-template-columns:2fr 1fr;}
+.chart-grid.thirds{grid-template-columns:repeat(3,1fr);}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:18px;}
+.chart-card.span2{grid-column:span 2;}
+.chart-title{font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.chart-sub{font-size:10.5px;color:var(--muted);margin-bottom:14px;}
+canvas{max-height:270px!important;}
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-bottom:22px;}
+.table-header{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+.table-header h3{font-size:13px;font-weight:600;color:var(--text);}
+.table-search{margin-left:auto;border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text);background:var(--marble);min-width:160px;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead th{background:var(--marble);padding:9px 13px;text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border);white-space:nowrap;}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+tbody tr:hover{background:#FAFAF8;}
+tbody td{padding:9px 13px;color:var(--text);}
+tbody td.num{font-variant-numeric:tabular-nums;text-align:right;}
+tbody td.muted{color:var(--muted);}
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:9.5px;font-weight:600;}
+.badge.sales{background:#DBEAFE;color:#1D4ED8;}.badge.purchase{background:#FCE7F3;color:#9D174D;}
+.badge.transport{background:#E0F2FE;color:#075985;}.badge.customs{background:#FEF3C7;color:#92400E;}
+.badge.ibkb{background:#D1FAE5;color:#065F46;}.badge.navlun{background:#EDE9FE;color:#5B21B6;}
+.badge.lushing{background:#FFE4E6;color:#9F1239;}.badge.gb{background:#ECFDF5;color:#064E3B;}
+.insight-box{background:linear-gradient(135deg,var(--slate) 0%,var(--slate3) 100%);border-radius:10px;padding:18px 22px;color:white;margin-bottom:22px;}
+.insight-title{font-family:'Cinzel',serif;font-size:12px;color:var(--gold-light);margin-bottom:10px;letter-spacing:.05em;}
+.insight-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;}
+.insight-item{border-left:2px solid rgba(196,145,58,.4);padding-left:11px;}
+.insight-item-label{font-size:9.5px;color:rgba(255,255,255,.45);margin-bottom:3px;}
+.insight-item-val{font-size:14px;font-weight:600;color:white;}
+.insight-item-sub{font-size:9.5px;color:rgba(255,255,255,.38);margin-top:1px;}
+.vein-divider{height:1px;margin:20px 0;background:linear-gradient(90deg,transparent,var(--gold-light) 25%,rgba(26,122,138,.5) 55%,var(--gold-light) 80%,transparent);opacity:.35;}
+#loading{position:fixed;inset:0;background:rgba(249,248,246,.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:999;}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:12.5px;color:var(--muted);margin-top:12px;}
+@media(max-width:900px){#sidebar{width:58px;}.sidebar-logo .logo-title,.nav-item span,.nav-label,.sidebar-footer,.ni-count{display:none;}.nav-item{justify-content:center;padding:11px;}#main{margin-left:58px;}.chart-grid,.chart-grid.wide,.chart-grid.thirds{grid-template-columns:1fr;}.chart-card.span2{grid-column:span 1;}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-vein"></div>
+    <div class="logo-title"><span class="logo-dot"></span>AKNAN MERMER</div>
+    <div class="logo-sub">Invoice Intelligence Dashboard</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <div class="nav-item active" onclick="showPage('overview')"><span class="ni-icon">◈</span><span>Overview</span></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Worksheets</div>
+    <div class="nav-item" onclick="showPage('purchase')"><span class="ni-icon">📦</span><span>Purchase</span><span class="ni-count" id="cnt-purchase">—</span></div>
+    <div class="nav-item" onclick="showPage('sales')"><span class="ni-icon">💎</span><span>Sales</span><span class="ni-count" id="cnt-sales">—</span></div>
+    <div class="nav-item" onclick="showPage('transport')"><span class="ni-icon">🚛</span><span>Transport</span><span class="ni-count" id="cnt-transport">—</span></div>
+    <div class="nav-item" onclick="showPage('gumruk')"><span class="ni-icon">🏛</span><span>Gümrukleme</span><span class="ni-count" id="cnt-gumruk">—</span></div>
+    <div class="nav-item" onclick="showPage('lushing')"><span class="ni-icon">⚓</span><span>Lushing/Depolama</span><span class="ni-count" id="cnt-lushing">—</span></div>
+    <div class="nav-item" onclick="showPage('navlun')"><span class="ni-icon">🚢</span><span>Navlun &amp; Lojistik</span><span class="ni-count" id="cnt-navlun">—</span></div>
+    <div class="nav-item" onclick="showPage('gb')"><span class="ni-icon">📋</span><span>GB Beyannamesi</span><span class="ni-count" id="cnt-gb">—</span></div>
+    <div class="nav-item" onclick="showPage('ibkb')"><span class="ni-icon">🏦</span><span>IBKB</span><span class="ni-count" id="cnt-ibkb">—</span></div>
+  </div>
+  <div class="sidebar-footer" id="sidebar-fname">INVOICES ANALYSIS.xlsx</div>
+</nav>
+<div id="main">
+  <div class="topbar">
+    <div class="topbar-title">Invoice Analysis</div>
+    <span id="file-name">No file loaded</span>
+    <button id="upload-btn" onclick="document.getElementById('file-input').click()">&#11014; Upload Excel</button>
+    <input type="file" id="file-input" accept=".xlsx,.xls">
+  </div>
+  <div id="loading"><div class="spinner"></div><div class="loading-text">Analysing workbook…</div></div>
+  <div class="content">
+    <div id="upload-screen">
+      <div class="upload-hero">📊</div>
+      <div class="upload-title">Upload Your Workbook</div>
+      <div class="upload-sub">Upload INVOICES ANALYSIS.xlsx to generate interactive analytics, charts, and financial insights across all eight document categories.</div>
+      <button class="upload-cta" onclick="document.getElementById('file-input').click()">&#11014; Select Excel File</button>
+      <div class="upload-formats">Supported: .xlsx — data never leaves your browser</div>
+    </div>
+    <div id="dashboard">
+
+      <!-- OVERVIEW -->
+      <div class="page active" id="page-overview">
+        <div class="page-header"><div class="page-title">Business Overview</div><div class="page-subtitle">ALL_CATEGORIES consolidated sheet · all document types combined</div></div>
+        <div class="kpi-grid" id="kpi-overview"></div>
+        <div class="vein-divider"></div>
+        <div class="insight-box"><div class="insight-title">◈ Executive Summary</div><div class="insight-grid" id="insight-grid"></div></div>
+        <div class="chart-grid wide">
+          <div class="chart-card"><div class="chart-title">Monthly Document Volume</div><div class="chart-sub">All records processed per month</div><canvas id="chart-monthly"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Category Distribution</div><div class="chart-sub">Record count by document type</div><canvas id="chart-cats"></canvas></div>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-card"><div class="chart-title">Sales Revenue by Country (USD)</div><div class="chart-sub">Top export destinations by invoice value</div><canvas id="chart-sales-country"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Best-Selling Stone Types</div><div class="chart-sub">Quantity sold by material category</div><canvas id="chart-stone"></canvas></div>
+        </div>
+        <div class="chart-grid thirds">
+          <div class="chart-card"><div class="chart-title">VAT / KDV Overview</div><div class="chart-sub">Total · Used · Remaining</div><canvas id="chart-kdv"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Invoice Type Mix</div><div class="chart-sub">All records by invoice type</div><canvas id="chart-invtype"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Top Suppliers (Purchase USD)</div><div class="chart-sub">Ranked by purchase amount</div><canvas id="chart-buyers"></canvas></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><h3>Category Financial Summary</h3></div>
+          <table><thead><tr><th>Category</th><th>Records</th><th style="text-align:right">Total (TRY)</th><th style="text-align:right">Total (USD)</th><th style="text-align:right">KDV Total</th><th style="text-align:right">KDV Used</th><th style="text-align:right">KDV Rest</th></tr></thead><tbody id="tbody-cat-summary"></tbody></table>
+        </div>
+      </div>
+
+      <!-- PURCHASE -->
+      <div class="page" id="page-purchase">
+        <div class="page-header"><div class="page-title">Purchase Invoices</div><div class="page-subtitle">Raw material procurement analysis</div></div>
+        <div class="kpi-grid" id="kpi-purchase"></div>
+        <div class="chart-grid">
+          <div class="chart-card"><div class="chart-title">Top Suppliers (USD)</div><div class="chart-sub">Ranked by total invoice amount</div><canvas id="chart-pur-sellers"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Item Type Breakdown</div><div class="chart-sub">Purchase value by material description</div><canvas id="chart-pur-items"></canvas></div>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-card"><div class="chart-title">KDV Analysis</div><div class="chart-sub">Total · Used · Remaining VAT</div><canvas id="chart-pur-kdv"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Used vs Remaining Quantities</div><div class="chart-sub">Inventory utilization by supplier</div><canvas id="chart-pur-qty"></canvas></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><h3>Purchase Records</h3><input class="table-search" type="text" placeholder="Search…" oninput="filterTable(this,'tbody-purchase')"></div>
+          <div style="overflow-x:auto;max-height:380px;overflow-y:auto;">
+          <table><thead><tr><th>Group Code</th><th>Invoice No</th><th>Date</th><th>Seller</th><th style="text-align:right">USD</th><th style="text-align:right">TRY</th><th style="text-align:right">KDV</th><th>Type</th></tr></thead><tbody id="tbody-purchase"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SALES -->
+      <div class="page" id="page-sales">
+        <div class="page-header"><div class="page-title">Sales Invoices</div><div class="page-subtitle">Export revenue · country · product analysis</div></div>
+        <div class="kpi-grid" id="kpi-sales"></div>
+        <div class="chart-grid wide">
+          <div class="chart-card"><div class="chart-title">Revenue by Country (USD)</div><div class="chart-sub">Top export destinations</div><canvas id="chart-sal-country"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Stone Types Sold</div><div class="chart-sub">Quantity by material</div><canvas id="chart-sal-stone"></canvas></div>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-card"><div class="chart-title">Top Buyers (USD)</div><div class="chart-sub">Customers ranked by total purchase</div><canvas id="chart-sal-buyers"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Quantity Sold by Stone Type</div><div class="chart-sub">Volume per material category</div><canvas id="chart-sal-qty"></canvas></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><h3>Sales Records</h3><input class="table-search" type="text" placeholder="Search…" oninput="filterTable(this,'tbody-sales')"></div>
+          <div style="overflow-x:auto;max-height:380px;overflow-y:auto;">
+          <table><thead><tr><th>Group Code</th><th>Invoice No</th><th>Date</th><th>Buyer</th><th>Country</th><th style="text-align:right">USD</th><th style="text-align:right">TRY</th><th>Stone</th><th>Incoterm</th></tr></thead><tbody id="tbody-sales"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRANSPORT -->
+      <div class="page" id="page-transport">
+        <div class="page-header"><div class="page-title">Transport Invoices</div><div class="page-subtitle">Domestic and international transport cost analysis</div></div>
+        <div class="kpi-grid" id="kpi-transport"></div>
+        <div class="chart-grid">
+          <div class="chart-card"><div class="chart-title">Top Transport Providers (TRY)</div><div class="chart-sub">Ranked by invoice amount</div><canvas id="chart-trn-sellers"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Transport Types</div><div class="chart-sub">By invoice type or mode</div><canvas id="chart-trn-type"></canvas></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><h3>Transport Records</h3><input class="table-search" type="text" placeholder="Search…" oninput="filterTable(this,'tbody-transport')"></div>
+          <div style="overflow-x:auto;max-height:380px;overflow-y:auto;">
+          <table><thead><tr><th>Group Code</th><th>Invoice No</th><th>Date</th><th>Seller</th><th>Type</th><th style="text-align:right">TRY</th><th style="text-align:right">USD</th><th style="text-align:right">KDV</th></tr></thead><tbody id="tbody-transport"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- GUMRUKLEME -->
+      <div class="page" id="page-gumruk">
+        <div class="page-header"><div class="page-title">Gümrukleme (Customs Brokerage)</div><div class="page-subtitle">Customs clearance fees and service costs</div></div>
+        <div class="kpi-grid" id="kpi-gumruk"></div>
+        <div class="chart-grid">
+          <div class="chart-card"><div class="chart-title">Top Customs Brokers (TRY)</div><div class="chart-sub">Ranked by total fees</div><canvas id="chart-gum-sellers"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Customs Fees by Country</div><div class="chart-sub">Destination distribution</div><canvas id="chart-gum-country"></canvas></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><h3>Customs Records</h3><input class="table-search" type="text" placeholder="Search…" oninput="filterTable(this,'tbody-gumruk')"></div>
+          <div style="overflow-x:auto;max-height:380px;overflow-y:auto;">
+          <table><thead><tr><th>Group Code</th><th>Invoice No</th><th>Date</th><th>Broker</th><th>Country</th><th style="text-align:right">TRY</th><th style="text-align:right">USD</th><th style="text-align:right">KDV</th></tr></thead><tbody id="tbody-gumruk"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- LUSHING -->
+      <div class="page" id="page-lushing">
+        <div class="page-header"><div class="page-title">Lushing &amp; Depolama</div><div class="page-subtitle">Container lashing and storage cost analysis</div></div>
+        <div class="kpi-grid" id="kpi-lushing"></div>
+        <div class="chart-grid">
+          <div class="chart-card"><div class="chart-title">Service Providers (TRY)</div><div class="chart-sub">Lashing/storage companies by cost</div><canvas id="chart-lus-sellers"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Service Types</div><div class="chart-sub">Description breakdown</div><canvas id="chart-lus-items"></canvas></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><h3>Lushing / Depolama Records</h3></div>
+          <div style="overflow-x:auto;max-height:380px;overflow-y:auto;">
+          <table><thead><tr><th>Group Code</th><th>Invoice No</th><th>Date</th><th>Seller</th><th style="text-align:right">TRY</th><th style="text-align:right">KDV</th></tr></thead><tbody id="tbody-lushing"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- NAVLUN -->
+      <div class="page" id="page-navlun">
+        <div class="page-header"><div class="page-title">Navlun &amp; Lojistik</div><div class="page-subtitle">Freight, sea shipping and logistics cost analysis</div></div>
+        <div class="kpi-grid" id="kpi-navlun"></div>
+        <div class="chart-grid">
+          <div class="chart-card"><div class="chart-title">Freight Providers (USD)</div><div class="chart-sub">Logistics companies by amount</div><canvas id="chart-nav-sellers"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Routes by Country</div><div class="chart-sub">Destination distribution for freight</div><canvas id="chart-nav-country"></canvas></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><h3>Navlun / Logistik Records</h3><input class="table-search" type="text" placeholder="Search…" oninput="filterTable(this,'tbody-navlun')"></div>
+          <div style="overflow-x:auto;max-height:380px;overflow-y:auto;">
+          <table><thead><tr><th>Group Code</th><th>Invoice No</th><th>Date</th><th>Seller</th><th>Country</th><th style="text-align:right">USD</th><th style="text-align:right">TRY</th></tr></thead><tbody id="tbody-navlun"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- GB -->
+      <div class="page" id="page-gb">
+        <div class="page-header"><div class="page-title">GB Beyannamesi (Export Declarations)</div><div class="page-subtitle">GÇB customs declarations — countries, amounts, and brokers</div></div>
+        <div class="kpi-grid" id="kpi-gb"></div>
+        <div class="chart-grid">
+          <div class="chart-card"><div class="chart-title">Declarations by Country</div><div class="chart-sub">GÇB count per destination</div><canvas id="chart-gb-country"></canvas></div>
+          <div class="chart-card"><div class="chart-title">Invoice Value by Country (USD)</div><div class="chart-sub">Declared export value per country</div><canvas id="chart-gb-usd"></canvas></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><h3>Export Declaration Records</h3><input class="table-search" type="text" placeholder="Search…" oninput="filterTable(this,'tbody-gb')"></div>
+          <div style="overflow-x:auto;max-height:380px;overflow-y:auto;">
+          <table><thead><tr><th>Group Code</th><th>GÇB Number</th><th>Date</th><th>Buyer</th><th>Country</th><th style="text-align:right">Total USD</th><th>Customs Office</th><th>Broker</th></tr></thead><tbody id="tbody-gb"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- IBKB -->
+      <div class="page" id="page-ibkb">
+        <div class="page-header"><div class="page-title">IBKB — İhracat Bedeli Kabul Belgeleri</div><div class="page-subtitle">Bank payment receipts · Dekont analysis · Monthly tracking</div></div>
+        <div class="kpi-grid" id="kpi-ibkb"></div>
+        <div class="chart-grid wide">
+          <div class="chart-card"><div class="chart-title">Monthly IBKB Count</div><div class="chart-sub">IBKB records created per month</div><canvas id="chart-ibkb-monthly"></canvas></div>
+          <div class="chart-card"><div class="chart-title">IBKB by Country</div><div class="chart-sub">Payment receipt distribution by destination</div><canvas id="chart-ibkb-country"></canvas></div>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-card"><div class="chart-title">Dekont Amount by Country (USD)</div><div class="chart-sub">Total received payments per country</div><canvas id="chart-ibkb-dekont"></canvas></div>
+          <div class="chart-card"><div class="chart-title">GB Amount vs Dekont (USD)</div><div class="chart-sub">Declared vs received comparison by country</div><canvas id="chart-ibkb-compare"></canvas></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><h3>IBKB Records</h3><input class="table-search" type="text" placeholder="Search…" oninput="filterTable(this,'tbody-ibkb')"></div>
+          <div style="overflow-x:auto;max-height:380px;overflow-y:auto;">
+          <table><thead><tr><th>Group Code</th><th>IBKB Seri No</th><th>IBKB Tarihi</th><th>Bank</th><th>GB No</th><th>Country</th><th style="text-align:right">GB Amt (USD)</th><th style="text-align:right">Dekont (USD)</th><th style="text-align:right">Kur</th></tr></thead><tbody id="tbody-ibkb"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /dashboard -->
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+const fmt=(n,d=2)=>isNaN(n)||n==null?'—':Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtInt=n=>isNaN(n)||n==null?'—':Math.round(Number(n)).toLocaleString('en-US');
+const safeNum=v=>{const n=parseFloat(v);return isNaN(n)?0:n;};
+const trunc=(s,n=30)=>s&&String(s).length>n?String(s).slice(0,n)+'…':(s||'');
+const PALETTE=['#C4913A','#1A7A8A','#2563EB','#16A34A','#9333EA','#DC2626','#D97706','#0891B2','#BE185D','#065F46','#7C3AED','#0F766E'];
+let chartReg={};
+function mc(id,type,labels,datasets,opts={}){
+  const ctx=document.getElementById(id); if(!ctx)return;
+  if(chartReg[id])chartReg[id].destroy();
+  chartReg[id]=new Chart(ctx,{type,data:{labels,datasets},options:{responsive:true,maintainAspectRatio:true,
+    plugins:{legend:{display:type==='doughnut'||type==='pie',position:'bottom',labels:{boxWidth:10,font:{size:9.5},padding:7}},
+      tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},
+    scales:['bar','line'].includes(type)?{x:{ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'k':v},grid:{color:'#F1EFE9'}}}:undefined,...opts}});
+}
+function filterTable(input,tbodyId){const q=input.value.toLowerCase();document.querySelectorAll('#'+tbodyId+' tr').forEach(tr=>{tr.style.display=tr.textContent.toLowerCase().includes(q)?'':'none';});}
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const pg=document.getElementById('page-'+name); if(pg)pg.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{if((n.getAttribute('onclick')||'').includes("'"+name+"'"))n.classList.add('active');});
+}
+function kpi(label,value,sub='',accent=''){return '<div class="kpi-card" style="--accent:'+accent+'"><div class="kpi-label">'+label+'</div><div class="kpi-value">'+value+'</div>'+(sub?'<div class="kpi-sub">'+sub+'</div>':'')+'</div>';}
+let WB={};
+document.getElementById('file-input').addEventListener('change',async function(e){
+  const file=e.target.files[0]; if(!file)return;
+  document.getElementById('file-name').textContent=file.name;
+  document.getElementById('sidebar-fname').textContent=file.name;
+  document.getElementById('loading').style.display='flex';
+  await new Promise(r=>setTimeout(r,60));
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    WB={};
+    wb.SheetNames.forEach(n=>{WB[n]=XLSX.utils.sheet_to_json(wb.Sheets[n],{raw:false,defval:'',dateNF:'YYYY-MM-DD'});});
+    buildDashboard();
+    document.getElementById('upload-screen').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+  }catch(err){alert('Error reading file: '+err.message);}
+  document.getElementById('loading').style.display='none';
+  e.target.value='';
+});
+function buildDashboard(){
+  const all=WB['ALL_CATEGORIES']||[];
+  const names={purchase:'PURCHASE',sales:'SALES',transport:'TRANSPORT',gumruk:'GUMRUKLEME',lushing:'LUSHING_DEPOLAMA',navlun:'NAVLUN_LOGISTIK',gb:'GB_BEYANNAMESI',ibkb:'IBKB'};
+  Object.entries(names).forEach(([id,sh])=>{const el=document.getElementById('cnt-'+id);if(el)el.textContent=(WB[sh]||[]).length;});
+  buildOverview(all);
+  buildPurchase(WB['PURCHASE']||[]);
+  buildSales(WB['SALES']||[]);
+  buildTransport(WB['TRANSPORT']||[]);
+  buildGumruk(WB['GUMRUKLEME']||[]);
+  buildLushing(WB['LUSHING_DEPOLAMA']||[]);
+  buildNavlun(WB['NAVLUN_LOGISTIK']||[]);
+  buildGB(WB['GB_BEYANNAMESI']||[]);
+  buildIBKB(WB['IBKB']||[]);
+}
+function buildOverview(all){
+  if(!all.length)return;
+  const cat=c=>all.filter(r=>r.Category===c);
+  const sales=cat('SALES'),purchase=cat('PURCHASE'),transport=cat('TRANSPORT'),
+        gumruk=cat('GUMRUKLEME'),navlun=cat('NAVLUN_LOGISTIK'),lushing=cat('LUSHING_DEPOLAMA'),
+        ibkb=cat('IBKB'),gb=cat('GB_BEYANNAMESI');
+  const sumF=(arr,k)=>arr.reduce((s,r)=>s+safeNum(r[k]),0);
+  const salUSD=sumF(sales,'Total Price (USD)');
+  const salTRY=sumF(sales,'Total Price (TRY)');
+  const purUSD=sumF(purchase,'Total Price (USD)');
+  const purTRY=sumF(purchase,'Total Price (TRY)');
+  const kdvT=sumF(all,'kdv'), kdvU=sumF(all,'used-kdv'), kdvR=kdvT-kdvU;
+  const expenses=purTRY+sumF(transport,'Total Price (TRY)')+sumF(gumruk,'Total Price (TRY)')+
+    sumF(navlun,'Total Price TRY')+sumF(navlun,'Total Price (TRY)')+
+    sumF(lushing,'Total Price (TRY)');
+  const profit=salTRY-expenses;
+  const ibkbDekont=sumF(ibkb,'DEKONT TUTARI USD');
+  const ibkbGB=sumF(ibkb,'GB BEDELİN TUTARI USD');
+  document.getElementById('kpi-overview').innerHTML=
+    kpi('Total Sales (USD)','$'+fmt(salUSD),'Export revenue',PALETTE[3])+
+    kpi('Total Sales (TRY)','₺'+fmtInt(salTRY),'',PALETTE[3])+
+    kpi('Total Purchases (USD)','$'+fmt(purUSD),'Import spend',PALETTE[1])+
+    kpi('Total KDV','₺'+fmtInt(kdvT),'VAT charged',PALETTE[6])+
+    kpi('KDV Used','₺'+fmtInt(kdvU),'Offset applied',PALETTE[1])+
+    kpi('KDV Remaining','₺'+fmtInt(Math.abs(kdvR)),'Net payable',PALETTE[5])+
+    kpi('Total Records',''+all.length,'All categories',PALETTE[0])+
+    kpi('Profit/Loss (TRY)',(profit>=0?'+':'−')+'₺'+fmtInt(Math.abs(profit)),'Sales minus expenses',profit>=0?PALETTE[3]:PALETTE[5]);
+  const topC=Object.entries(all.filter(r=>r.Category==='SALES').reduce((m,r)=>{const c=r['Country']||'?';m[c]=(m[c]||0)+safeNum(r['Total Price (USD)']);return m;},{})).sort((a,b)=>b[1]-a[1])[0];
+  const topS=Object.entries(all.filter(r=>r.Category==='SALES').reduce((m,r)=>{const s=r['Stone Type']||'?';m[s]=(m[s]||0)+safeNum(r['Quantity']||1);return m;},{})).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('insight-grid').innerHTML=
+    '<div class="insight-item"><div class="insight-item-label">Top Export Country</div><div class="insight-item-val">'+(topC?topC[0]:'—')+'</div><div class="insight-item-sub">'+(topC?'$'+fmt(topC[1]):'')+'</div></div>'+
+    '<div class="insight-item"><div class="insight-item-label">Best-Selling Stone</div><div class="insight-item-val">'+(topS?topS[0]:'—')+'</div><div class="insight-item-sub">'+(topS?fmtInt(topS[1])+' units':'')+'</div></div>'+
+    '<div class="insight-item"><div class="insight-item-label">Total IBKB Dekont (USD)</div><div class="insight-item-val">$'+fmt(ibkbDekont)+'</div><div class="insight-item-sub">GB amount: $'+fmt(ibkbGB)+'</div></div>'+
+    '<div class="insight-item"><div class="insight-item-label">Coverage Ratio</div><div class="insight-item-val">'+(ibkbGB>0?(ibkbDekont/ibkbGB*100).toFixed(1)+'%':'—')+'</div><div class="insight-item-sub">Dekont / GB amount</div></div>'+
+    '<div class="insight-item"><div class="insight-item-label">Total Expenses (TRY)</div><div class="insight-item-val">₺'+fmtInt(expenses)+'</div><div class="insight-item-sub">All cost categories</div></div>'+
+    '<div class="insight-item"><div class="insight-item-label">GB Declarations</div><div class="insight-item-val">'+gb.length+'</div><div class="insight-item-sub">Export GÇB count</div></div>';
+  // MONTHLY
+  const mon={};
+  all.forEach(r=>{const d=r['Invoice Date']||r['IBKB TARİHİ']||r['Beyanname Tarihi']||'';if(!d)return;const dt=new Date(d);if(isNaN(dt))return;const k=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');mon[k]=(mon[k]||0)+1;});
+  const mk=Object.keys(mon).sort();
+  mc('chart-monthly','bar',mk.map(k=>{const[y,m]=k.split('-');return m+'/'+y.slice(2);}),
+    [{label:'Records',data:mk.map(k=>mon[k]),backgroundColor:PALETTE[0]+'CC',borderColor:PALETTE[0],borderWidth:1,borderRadius:3}]);
+  // CATEGORY
+  const catMap={};all.forEach(r=>{catMap[r.Category]=(catMap[r.Category]||0)+1;});
+  const catE=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+  mc('chart-cats','doughnut',catE.map(e=>e[0]),
+    [{data:catE.map(e=>e[1]),backgroundColor:PALETTE.slice(0,catE.length),borderWidth:2,borderColor:'#fff'}]);
+  // SALES COUNTRY
+  const scMap={};sales.forEach(r=>{const c=r['Country']||'?';scMap[c]=(scMap[c]||0)+safeNum(r['Total Price (USD)']);});
+  const scE=Object.entries(scMap).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  mc('chart-sales-country','bar',scE.map(e=>e[0]),
+    [{label:'USD',data:scE.map(e=>e[1]),backgroundColor:PALETTE.map(c=>c+'BB'),borderColor:PALETTE,borderWidth:1,borderRadius:3}]);
+  // STONE
+  const stMap={};sales.forEach(r=>{const s=r['Stone Type']||'Other';stMap[s]=(stMap[s]||0)+safeNum(r['Quantity']||1);});
+  const stE=Object.entries(stMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mc('chart-stone','doughnut',stE.map(e=>e[0]),
+    [{data:stE.map(e=>e[1]),backgroundColor:PALETTE.slice(0,stE.length),borderWidth:2,borderColor:'#fff'}]);
+  // KDV
+  mc('chart-kdv','bar',['Total KDV','Used KDV','Remaining KDV'],
+    [{data:[kdvT,kdvU,Math.max(0,kdvR)],backgroundColor:[PALETTE[6]+'AA',PALETTE[1]+'AA',PALETTE[5]+'AA'],borderColor:[PALETTE[6],PALETTE[1],PALETTE[5]],borderWidth:1,borderRadius:3}]);
+  // INV TYPE
+  const itMap={};all.forEach(r=>{const t=r['Invoice Type']||'Other';itMap[t]=(itMap[t]||0)+1;});
+  const itE=Object.entries(itMap).sort((a,b)=>b[1]-a[1]).slice(0,9);
+  mc('chart-invtype','pie',itE.map(e=>e[0]),
+    [{data:itE.map(e=>e[1]),backgroundColor:PALETTE.slice(0,itE.length),borderWidth:2,borderColor:'#fff'}]);
+  // SUPPLIERS
+  const supMap={};purchase.forEach(r=>{const s=r['Seller Name']||'?';supMap[s]=(supMap[s]||0)+safeNum(r['Total Price (USD)']);});
+  const supE=Object.entries(supMap).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  mc('chart-buyers','bar',supE.map(e=>trunc(e[0],20)),
+    [{label:'USD',data:supE.map(e=>e[1]),backgroundColor:PALETTE[1]+'BB',borderColor:PALETTE[1],borderWidth:1,borderRadius:3}],{indexAxis:'y'});
+  // CAT TABLE
+  const bks={'SALES':'sales','PURCHASE':'purchase','TRANSPORT':'transport','GUMRUKLEME':'customs','IBKB':'ibkb','NAVLUN_LOGISTIK':'navlun','LUSHING_DEPOLAMA':'lushing','GB_BEYANNAMESI':'gb'};
+  const catList=['SALES','PURCHASE','TRANSPORT','GUMRUKLEME','LUSHING_DEPOLAMA','NAVLUN_LOGISTIK','GB_BEYANNAMESI','IBKB'];
+  document.getElementById('tbody-cat-summary').innerHTML=catList.map(c=>{
+    const rows=all.filter(r=>r.Category===c);
+    const t=rows.reduce((s,r)=>s+safeNum(r['Total Price (TRY)']),0);
+    const u=rows.reduce((s,r)=>s+safeNum(r['Total Price (USD)']),0);
+    const k=rows.reduce((s,r)=>s+safeNum(r['kdv']),0);
+    const ku=rows.reduce((s,r)=>s+safeNum(r['used-kdv']),0);
+    const kr=rows.reduce((s,r)=>s+safeNum(r['rest-kdv']),0);
+    return '<tr><td><span class="badge '+(bks[c]||'')+'">'+c+'</span></td><td>'+rows.length+'</td><td class="num">₺'+fmtInt(t)+'</td><td class="num">$'+fmt(u)+'</td><td class="num">₺'+fmtInt(k)+'</td><td class="num">₺'+fmtInt(ku)+'</td><td class="num">₺'+fmtInt(Math.abs(kr))+'</td></tr>';
+  }).join('');
+}
+function buildPurchase(rows){
+  if(!rows.length)return;
+  const s=(k)=>rows.reduce((a,r)=>a+safeNum(r[k]),0);
+  const tu=s('Total Price (USD)'),tt=s('Total Price (TRY)'),kt=s('kdv'),ku=s('used-kdv'),kr=s('rest-kdv');
+  document.getElementById('kpi-purchase').innerHTML=
+    kpi('Total Purchase (USD)','$'+fmt(tu),'',PALETTE[0])+kpi('Total Purchase (TRY)','₺'+fmtInt(tt),'',PALETTE[1])+
+    kpi('Total KDV','₺'+fmtInt(kt),'',PALETTE[6])+kpi('KDV Used','₺'+fmtInt(ku),'',PALETTE[1])+
+    kpi('KDV Remaining','₺'+fmtInt(Math.abs(kr)),'',PALETTE[5])+kpi('Records',''+rows.length,'Purchase invoices',PALETTE[0]);
+  const sm={};rows.forEach(r=>{const k=r['Seller Name']||'?';sm[k]=(sm[k]||0)+safeNum(r['Total Price (USD)']);});
+  const se=Object.entries(sm).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mc('chart-pur-sellers','bar',se.map(e=>trunc(e[0],22)),[{label:'USD',data:se.map(e=>e[1]),backgroundColor:PALETTE[0]+'BB',borderColor:PALETTE[0],borderWidth:1,borderRadius:3}],{indexAxis:'y'});
+  const im={};rows.forEach(r=>{const k=(r['Item Name & Description']||'Other').slice(0,28);im[k]=(im[k]||0)+safeNum(r['Total Price (USD)']);});
+  const ie=Object.entries(im).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  mc('chart-pur-items','doughnut',ie.map(e=>e[0]),[{data:ie.map(e=>e[1]),backgroundColor:PALETTE.slice(0,ie.length),borderWidth:2,borderColor:'#fff'}]);
+  mc('chart-pur-kdv','bar',['Total','Used','Remaining'],[{data:[kt,ku,Math.abs(kr)],backgroundColor:[PALETTE[6]+'AA',PALETTE[1]+'AA',PALETTE[5]+'AA'],borderColor:[PALETTE[6],PALETTE[1],PALETTE[5]],borderWidth:1,borderRadius:3}]);
+  const qm={};rows.forEach(r=>{const k=r['Seller Name']||'?';qm[k]=(qm[k]||0)+safeNum(r['used-quantities']);});
+  const qe=Object.entries(qm).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  mc('chart-pur-qty','bar',qe.map(e=>trunc(e[0],22)),[{label:'Used Qty',data:qe.map(e=>e[1]),backgroundColor:PALETTE[2]+'BB',borderColor:PALETTE[2],borderWidth:1,borderRadius:3}],{indexAxis:'y'});
+  document.getElementById('tbody-purchase').innerHTML=rows.slice(0,300).map(r=>'<tr><td>'+r['Group Code']+'</td><td>'+r['Invoice Number']+'</td><td class="muted">'+r['Invoice Date']+'</td><td>'+trunc(r['Seller Name'],26)+'</td><td class="num">$'+fmt(safeNum(r['Total Price (USD)']))+'</td><td class="num">₺'+fmtInt(safeNum(r['Total Price (TRY)']))+'</td><td class="num">₺'+fmtInt(safeNum(r['kdv']))+'</td><td><span class="badge purchase">'+r['Invoice Type']+'</span></td></tr>').join('');
+}
+function buildSales(rows){
+  if(!rows.length)return;
+  const tu=rows.reduce((s,r)=>s+safeNum(r['Total Price (USD)']),0);
+  const tt=rows.reduce((s,r)=>s+safeNum(r['Total Price (TRY)']),0);
+  const tq=rows.reduce((s,r)=>s+safeNum(r['Quantity']),0);
+  document.getElementById('kpi-sales').innerHTML=
+    kpi('Total Sales (USD)','$'+fmt(tu),'Export revenue',PALETTE[3])+
+    kpi('Total Sales (TRY)','₺'+fmtInt(tt),'',PALETTE[3])+
+    kpi('Total Quantity',fmt(tq,2),'Units sold',PALETTE[0])+
+    kpi('Countries',''+new Set(rows.map(r=>r['Country']).filter(Boolean)).size,'Export destinations',PALETTE[2])+
+    kpi('Buyers',''+new Set(rows.map(r=>r['Buyer Name']).filter(Boolean)).size,'Unique customers',PALETTE[4])+
+    kpi('Records',''+rows.length,'Sales invoices',PALETTE[1]);
+  const cm={};rows.forEach(r=>{const k=r['Country']||'?';cm[k]=(cm[k]||0)+safeNum(r['Total Price (USD)']);});
+  const ce=Object.entries(cm).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  mc('chart-sal-country','bar',ce.map(e=>e[0]),[{label:'USD',data:ce.map(e=>e[1]),backgroundColor:PALETTE.map(c=>c+'BB'),borderColor:PALETTE,borderWidth:1,borderRadius:3}]);
+  const stm={};rows.forEach(r=>{const k=r['Stone Type']||'Other';stm[k]=(stm[k]||0)+safeNum(r['Quantity']||1);});
+  const ste=Object.entries(stm).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mc('chart-sal-stone','doughnut',ste.map(e=>e[0]),[{data:ste.map(e=>e[1]),backgroundColor:PALETTE.slice(0,ste.length),borderWidth:2,borderColor:'#fff'}]);
+  const bm={};rows.forEach(r=>{const k=r['Buyer Name']||'?';bm[k]=(bm[k]||0)+safeNum(r['Total Price (USD)']);});
+  const be=Object.entries(bm).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mc('chart-sal-buyers','bar',be.map(e=>trunc(e[0],22)),[{label:'USD',data:be.map(e=>e[1]),backgroundColor:PALETTE[1]+'BB',borderColor:PALETTE[1],borderWidth:1,borderRadius:3}],{indexAxis:'y'});
+  const sqm={};rows.forEach(r=>{const k=r['Stone Type']||'Other';sqm[k]=(sqm[k]||0)+safeNum(r['Quantity']);});
+  const sqe=Object.entries(sqm).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mc('chart-sal-qty','bar',sqe.map(e=>e[0]),[{label:'Quantity',data:sqe.map(e=>e[1]),backgroundColor:PALETTE[0]+'BB',borderColor:PALETTE[0],borderWidth:1,borderRadius:3}]);
+  document.getElementById('tbody-sales').innerHTML=rows.slice(0,300).map(r=>'<tr><td>'+r['Group Code']+'</td><td>'+r['Invoice Number']+'</td><td class="muted">'+r['Invoice Date']+'</td><td>'+trunc(r['Buyer Name'],20)+'</td><td>'+r['Country']+'</td><td class="num">$'+fmt(safeNum(r['Total Price (USD)']))+'</td><td class="num">₺'+fmtInt(safeNum(r['Total Price (TRY)']))+'</td><td>'+r['Stone Type']+'</td><td>'+r['Incoterm']+'</td></tr>').join('');
+}
+function buildTransport(rows){
+  if(!rows.length)return;
+  const tt=rows.reduce((s,r)=>s+safeNum(r['Total Price (TRY)']),0);
+  const tu=rows.reduce((s,r)=>s+safeNum(r['Total Price (USD)']),0);
+  const kt=rows.reduce((s,r)=>s+safeNum(r['kdv']),0);
+  document.getElementById('kpi-transport').innerHTML=
+    kpi('Total Transport (TRY)','₺'+fmtInt(tt),'',PALETTE[2])+
+    kpi('Total Transport (USD)','$'+fmt(tu),'',PALETTE[1])+
+    kpi('Total KDV','₺'+fmtInt(kt),'',PALETTE[6])+
+    kpi('Records',''+rows.length,'Transport invoices',PALETTE[0]);
+  const sm={};rows.forEach(r=>{const k=r['Seller Name']||'?';sm[k]=(sm[k]||0)+safeNum(r['Total Price (TRY)']);});
+  const se=Object.entries(sm).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mc('chart-trn-sellers','bar',se.map(e=>trunc(e[0],22)),[{label:'TRY',data:se.map(e=>e[1]),backgroundColor:PALETTE[2]+'BB',borderColor:PALETTE[2],borderWidth:1,borderRadius:3}],{indexAxis:'y'});
+  const tm={};rows.forEach(r=>{const k=r['Transportation']||r['Invoice Type']||'Other';tm[k]=(tm[k]||0)+1;});
+  const te=Object.entries(tm).sort((a,b)=>b[1]-a[1]);
+  mc('chart-trn-type','doughnut',te.map(e=>e[0]),[{data:te.map(e=>e[1]),backgroundColor:PALETTE.slice(0,te.length),borderWidth:2,borderColor:'#fff'}]);
+  document.getElementById('tbody-transport').innerHTML=rows.slice(0,300).map(r=>'<tr><td>'+r['Group Code']+'</td><td>'+r['Invoice Number']+'</td><td class="muted">'+r['Invoice Date']+'</td><td>'+trunc(r['Seller Name'],24)+'</td><td>'+r['Invoice Type']+'</td><td class="num">₺'+fmtInt(safeNum(r['Total Price (TRY)']))+'</td><td class="num">$'+fmt(safeNum(r['Total Price (USD)']))+'</td><td class="num">₺'+fmtInt(safeNum(r['kdv']))+'</td></tr>').join('');
+}
+function buildGumruk(rows){
+  if(!rows.length)return;
+  const tt=rows.reduce((s,r)=>s+safeNum(r['Total Price (TRY)']),0);
+  const tu=rows.reduce((s,r)=>s+safeNum(r['Total Price (USD)']),0);
+  const kt=rows.reduce((s,r)=>s+safeNum(r['kdv']),0);
+  document.getElementById('kpi-gumruk').innerHTML=
+    kpi('Customs Fees (TRY)','₺'+fmtInt(tt),'',PALETTE[6])+
+    kpi('Customs Fees (USD)','$'+fmt(tu),'',PALETTE[1])+
+    kpi('Total KDV','₺'+fmtInt(kt),'',PALETTE[4])+
+    kpi('Records',''+rows.length,'Customs invoices',PALETTE[0]);
+  const sm={};rows.forEach(r=>{const k=r['Seller Name']||'?';sm[k]=(sm[k]||0)+safeNum(r['Total Price (TRY)']);});
+  const se=Object.entries(sm).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mc('chart-gum-sellers','bar',se.map(e=>trunc(e[0],22)),[{label:'TRY',data:se.map(e=>e[1]),backgroundColor:PALETTE[6]+'BB',borderColor:PALETTE[6],borderWidth:1,borderRadius:3}],{indexAxis:'y'});
+  const cm={};rows.forEach(r=>{const k=r['Country']||'?';cm[k]=(cm[k]||0)+safeNum(r['Total Price (TRY)']);});
+  const ce=Object.entries(cm).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mc('chart-gum-country','bar',ce.map(e=>e[0]),[{label:'TRY',data:ce.map(e=>e[1]),backgroundColor:PALETTE[6]+'BB',borderColor:PALETTE[6],borderWidth:1,borderRadius:3}]);
+  document.getElementById('tbody-gumruk').innerHTML=rows.slice(0,300).map(r=>'<tr><td>'+r['Group Code']+'</td><td>'+r['Invoice Number']+'</td><td class="muted">'+r['Invoice Date']+'</td><td>'+trunc(r['Seller Name'],24)+'</td><td>'+r['Country']+'</td><td class="num">₺'+fmtInt(safeNum(r['Total Price (TRY)']))+'</td><td class="num">$'+fmt(safeNum(r['Total Price (USD)']))+'</td><td class="num">₺'+fmtInt(safeNum(r['kdv']))+'</td></tr>').join('');
+}
+function buildLushing(rows){
+  if(!rows.length)return;
+  const tt=rows.reduce((s,r)=>s+safeNum(r['Total Price (TRY)']),0);
+  const kt=rows.reduce((s,r)=>s+safeNum(r['kdv']),0);
+  document.getElementById('kpi-lushing').innerHTML=
+    kpi('Total Cost (TRY)','₺'+fmtInt(tt),'Lushing & storage',PALETTE[7])+
+    kpi('Total KDV','₺'+fmtInt(kt),'',PALETTE[4])+
+    kpi('Records',''+rows.length,'Invoices',PALETTE[0]);
+  const sm={};rows.forEach(r=>{const k=r['Seller Name']||'?';sm[k]=(sm[k]||0)+safeNum(r['Total Price (TRY)']);});
+  const se=Object.entries(sm).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mc('chart-lus-sellers','bar',se.map(e=>trunc(e[0],22)),[{label:'TRY',data:se.map(e=>e[1]),backgroundColor:PALETTE[7]+'BB',borderColor:PALETTE[7],borderWidth:1,borderRadius:3}],{indexAxis:'y'});
+  const im={};rows.forEach(r=>{const k=(r['Item Name & Description']||'Other').slice(0,28);im[k]=(im[k]||0)+safeNum(r['Total Price (TRY)']);});
+  const ie=Object.entries(im).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  mc('chart-lus-items','doughnut',ie.map(e=>e[0]),[{data:ie.map(e=>e[1]),backgroundColor:PALETTE.slice(0,ie.length),borderWidth:2,borderColor:'#fff'}]);
+  document.getElementById('tbody-lushing').innerHTML=rows.slice(0,150).map(r=>'<tr><td>'+r['Group Code']+'</td><td>'+r['Invoice Number']+'</td><td class="muted">'+r['Invoice Date']+'</td><td>'+trunc(r['Seller Name'],28)+'</td><td class="num">₺'+fmtInt(safeNum(r['Total Price (TRY)']))+'</td><td class="num">₺'+fmtInt(safeNum(r['kdv']))+'</td></tr>').join('');
+}
+function buildNavlun(rows){
+  if(!rows.length)return;
+  const uk=rows[0]&&'Total Price USD' in rows[0]?'Total Price USD':'Total Price (USD)';
+  const tk=rows[0]&&'Total Price TRY' in rows[0]?'Total Price TRY':'Total Price (TRY)';
+  const tu=rows.reduce((s,r)=>s+safeNum(r[uk]),0);
+  const tt=rows.reduce((s,r)=>s+safeNum(r[tk]),0);
+  const kt=rows.reduce((s,r)=>s+safeNum(r['kdv']),0);
+  document.getElementById('kpi-navlun').innerHTML=
+    kpi('Navlun Total (USD)','$'+fmt(tu),'Freight & logistics',PALETTE[5])+
+    kpi('Navlun Total (TRY)','₺'+fmtInt(tt),'',PALETTE[1])+
+    kpi('Total KDV','₺'+fmtInt(kt),'',PALETTE[4])+
+    kpi('Records',''+rows.length,'Freight invoices',PALETTE[0]);
+  const sm={};rows.forEach(r=>{const k=r['Seller Name']||'?';sm[k]=(sm[k]||0)+safeNum(r[uk]);});
+  const se=Object.entries(sm).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mc('chart-nav-sellers','bar',se.map(e=>trunc(e[0],22)),[{label:'USD',data:se.map(e=>e[1]),backgroundColor:PALETTE[5]+'BB',borderColor:PALETTE[5],borderWidth:1,borderRadius:3}],{indexAxis:'y'});
+  const cm={};rows.forEach(r=>{const k=r['Country']||'?';cm[k]=(cm[k]||0)+safeNum(r[uk]);});
+  const ce=Object.entries(cm).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mc('chart-nav-country','doughnut',ce.map(e=>e[0]),[{data:ce.map(e=>e[1]),backgroundColor:PALETTE.slice(0,ce.length),borderWidth:2,borderColor:'#fff'}]);
+  document.getElementById('tbody-navlun').innerHTML=rows.slice(0,300).map(r=>'<tr><td>'+r['Group Code']+'</td><td>'+r['Invoice Number']+'</td><td class="muted">'+r['Invoice Date']+'</td><td>'+trunc(r['Seller Name'],24)+'</td><td>'+r['Country']+'</td><td class="num">$'+fmt(safeNum(r[uk]))+'</td><td class="num">₺'+fmtInt(safeNum(r[tk]))+'</td></tr>').join('');
+}
+function buildGB(rows){
+  if(!rows.length)return;
+  const uk=rows[0]&&'Total Invoice USD' in rows[0]?'Total Invoice USD':'Total Price (USD)';
+  const gcbK='GÇB Number' in (rows[0]||{})?'GÇB Number':'Invoice Number';
+  const tu=rows.reduce((s,r)=>s+safeNum(r[uk]),0);
+  document.getElementById('kpi-gb').innerHTML=
+    kpi('Total Declared (USD)','$'+fmt(tu),'GB invoice value',PALETTE[7])+
+    kpi('Countries',''+new Set(rows.map(r=>r['Country']).filter(Boolean)).size,'Export destinations',PALETTE[1])+
+    kpi('Declarations',''+rows.length,'GÇB records',PALETTE[0])+
+    kpi('Buyers',''+new Set(rows.map(r=>r['Buyer Name']).filter(Boolean)).size,'Unique customers',PALETTE[2]);
+  const cm={};rows.forEach(r=>{const k=r['Country']||'?';cm[k]=(cm[k]||0)+1;});
+  const ce=Object.entries(cm).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  mc('chart-gb-country','bar',ce.map(e=>e[0]),[{label:'Count',data:ce.map(e=>e[1]),backgroundColor:PALETTE[7]+'BB',borderColor:PALETTE[7],borderWidth:1,borderRadius:3}]);
+  const cm2={};rows.forEach(r=>{const k=r['Country']||'?';cm2[k]=(cm2[k]||0)+safeNum(r[uk]);});
+  const ce2=Object.entries(cm2).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mc('chart-gb-usd','bar',ce2.map(e=>e[0]),[{label:'USD',data:ce2.map(e=>e[1]),backgroundColor:PALETTE[2]+'BB',borderColor:PALETTE[2],borderWidth:1,borderRadius:3}]);
+  document.getElementById('tbody-gb').innerHTML=rows.slice(0,200).map(r=>'<tr><td>'+r['Group Code']+'</td><td>'+r[gcbK]+'</td><td class="muted">'+(r['Beyanname Tarihi']||r['Invoice Date'])+'</td><td>'+trunc(r['Buyer Name'],20)+'</td><td>'+r['Country']+'</td><td class="num">$'+fmt(safeNum(r[uk]))+'</td><td>'+trunc(r['Gümrük İşlemleri']||r['GÇB Number']||'',18)+'</td><td>'+trunc(r['Gümrük Müşaviri']||'',18)+'</td></tr>').join('');
+}
+function buildIBKB(rows){
+  if(!rows.length)return;
+  const cntK='GB ÜLKESİ' in (rows[0]||{})?'GB ÜLKESİ':'Country';
+  const snoK='IBKB SERİ NO' in (rows[0]||{})?'IBKB SERİ NO':'Invoice Number';
+  const dateK='IBKB TARİHİ' in (rows[0]||{})?'IBKB TARİHİ':'Invoice Date';
+  const bankK='IBKB YAPAN BANKASI' in (rows[0]||{})?'IBKB YAPAN BANKASI':'Seller Name';
+  const gbNoK='GB NO' in (rows[0]||{})?'GB NO':'GÇB Number';
+  const dekK='DEKONT TUTARI USD' in (rows[0]||{})?'DEKONT TUTARI USD':'Total Price (USD)';
+  const gbAK='GB BEDELİN TUTARI USD' in (rows[0]||{})?'GB BEDELİN TUTARI USD':'Total Invoice USD';
+  const kurK='IBKB DÖVİZ KURU' in (rows[0]||{})?'IBKB DÖVİZ KURU':'Exchange Rate (TRY/USD)';
+  const dk=rows.reduce((s,r)=>s+safeNum(r[dekK]),0);
+  const gb=rows.reduce((s,r)=>s+safeNum(r[gbAK]),0);
+  const yp=rows.reduce((s,r)=>s+safeNum(r['YAPILAN TUTARI USD']),0);
+  document.getElementById('kpi-ibkb').innerHTML=
+    kpi('Total Dekont (USD)','$'+fmt(dk),'Bank receipts received',PALETTE[3])+
+    kpi('Total GB Amount (USD)','$'+fmt(gb),'Declared export',PALETTE[0])+
+    kpi('Yapılan (USD)','$'+fmt(yp),'Completed payments',PALETTE[1])+
+    kpi('Coverage Ratio',gb>0?(dk/gb*100).toFixed(1)+'%':'—','Dekont/GB',PALETTE[2])+
+    kpi('Countries',''+new Set(rows.map(r=>r[cntK]).filter(Boolean)).size,'',PALETTE[4])+
+    kpi('Records',''+rows.length,'IBKB documents',PALETTE[6]);
+  // monthly
+  const mon={};rows.forEach(r=>{const d=r[dateK]||'';if(!d)return;const dt=new Date(d);if(isNaN(dt))return;const k=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');mon[k]=(mon[k]||0)+1;});
+  const mk=Object.keys(mon).sort();
+  mc('chart-ibkb-monthly','bar',mk.map(k=>{const[y,m]=k.split('-');return m+'/'+y.slice(2);}),[{label:'IBKB',data:mk.map(k=>mon[k]),backgroundColor:PALETTE[3]+'BB',borderColor:PALETTE[3],borderWidth:1,borderRadius:3}]);
+  const cm={};rows.forEach(r=>{const k=r[cntK]||'?';cm[k]=(cm[k]||0)+1;});
+  const ce=Object.entries(cm).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  mc('chart-ibkb-country','doughnut',ce.map(e=>e[0]),[{data:ce.map(e=>e[1]),backgroundColor:PALETTE.slice(0,ce.length),borderWidth:2,borderColor:'#fff'}]);
+  const dm={};rows.forEach(r=>{const k=r[cntK]||'?';dm[k]=(dm[k]||0)+safeNum(r[dekK]);});
+  const de=Object.entries(dm).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mc('chart-ibkb-dekont','bar',de.map(e=>e[0]),[{label:'Dekont USD',data:de.map(e=>e[1]),backgroundColor:PALETTE[3]+'BB',borderColor:PALETTE[3],borderWidth:1,borderRadius:3}]);
+  const gbm={},dkm={};rows.forEach(r=>{const k=r[cntK]||'?';gbm[k]=(gbm[k]||0)+safeNum(r[gbAK]);dkm[k]=(dkm[k]||0)+safeNum(r[dekK]);});
+  const cbk=Object.keys(gbm).filter(k=>gbm[k]>0||dkm[k]>0).sort((a,b)=>(gbm[b]||0)-(gbm[a]||0)).slice(0,8);
+  mc('chart-ibkb-compare','bar',cbk,
+    [{label:'GB Amount',data:cbk.map(k=>gbm[k]||0),backgroundColor:PALETTE[2]+'AA',borderColor:PALETTE[2],borderWidth:1,borderRadius:3},
+     {label:'Dekont',data:cbk.map(k=>dkm[k]||0),backgroundColor:PALETTE[3]+'AA',borderColor:PALETTE[3],borderWidth:1,borderRadius:3}]);
+  document.getElementById('tbody-ibkb').innerHTML=rows.slice(0,300).map(r=>'<tr><td>'+(r['Group Code']||'—')+'</td><td>'+r[snoK]+'</td><td class="muted">'+r[dateK]+'</td><td>'+trunc(r[bankK],22)+'</td><td>'+r[gbNoK]+'</td><td>'+r[cntK]+'</td><td class="num">$'+fmt(safeNum(r[gbAK]))+'</td><td class="num">$'+fmt(safeNum(r[dekK]))+'</td><td class="num">'+fmt(safeNum(r[kurK]))+'</td></tr>').join('');
+}
+</script>
+</body>
+</html>
